@@ -25,9 +25,10 @@ from sematic.db.queries import delete_note, get_note, save_note
 @sematic_api.route("/api/v1/notes", methods=["GET"])
 @authenticate
 def list_notes_endpoint(user: Optional[User]) -> flask.Response:
-    limit, order, _, _, sql_predicates = get_request_parameters(
+    parameters = get_request_parameters(
         args=flask.request.args, model=Note, default_order="asc"
     )
+    order, sql_predicates = parameters.order, parameters.filters
 
     with db().get_session() as session:
         query = session.query(Note)
@@ -35,9 +36,9 @@ def list_notes_endpoint(user: Optional[User]) -> flask.Response:
         if sql_predicates is not None:
             query = query.filter(sql_predicates)
 
-        if "calculator_path" in flask.request.args:
+        if "function_path" in flask.request.args:
             query = query.join(Run, Run.id == Note.root_id).filter(
-                Run.calculator_path == flask.request.args["calculator_path"]
+                Run.function_path == flask.request.args["function_path"]
             )
 
         query = query.order_by(order(Note.created_at))

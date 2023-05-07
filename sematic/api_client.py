@@ -2,6 +2,7 @@
 import json
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple, cast
+from urllib.parse import urlencode
 
 # Third-party
 import requests
@@ -25,6 +26,7 @@ from sematic.db.models.job import Job
 from sematic.db.models.resolution import Resolution
 from sematic.db.models.run import Run
 from sematic.db.models.user import User
+from sematic.metrics.metric_point import MetricPoint
 from sematic.plugins.abstract_external_resource import AbstractExternalResource
 from sematic.utils.retry import retry, retry_call
 from sematic.versions import CURRENT_VERSION, version_as_string
@@ -285,7 +287,7 @@ def cancel_resolution(resolution_id: str) -> Resolution:
 
 
 def schedule_run(run_id: str) -> Run:
-    """Ask the server to execute the calculator for the run."""
+    """Ask the server to execute the function for the run."""
     response = _post(f"/runs/{run_id}/schedule", json_payload={})
     return Run.from_json_encodable(response["content"])
 
@@ -421,10 +423,24 @@ def get_resources_by_root_run_id(root_run_id: str) -> List[AbstractExternalResou
     ]
 
 
-def get_runs_with_orphaned_jobs() -> List[str]:
+def get_run_ids_with_orphaned_jobs() -> List[str]:
     """Get ids of runs that have terminated, which still have non-terminal jobs."""
-    response = _get("/runs/with_orphaned_jobs")
-    return response["content"]
+    return _search_for_gc_runs("orphaned_jobs")
+
+
+def get_orphaned_run_ids() -> List[str]:
+    """Get ids of runs that have not terminated, which have a terminal resolution."""
+    return _search_for_gc_runs("orphaned")
+
+
+def _search_for_gc_runs(filter_name: str) -> List[str]:
+    filters = {filter_name: {"eq": True}}
+    query_params = {
+        "filters": json.dumps(filters),
+        "fields": json.dumps(["id"]),
+    }
+    response = _get("/runs?{}".format(urlencode(query_params)))
+    return [run["id"] for run in response["content"]]
 
 
 def clean_jobs_for_run(run_id: str, force: bool) -> List[str]:
@@ -433,10 +449,36 @@ def clean_jobs_for_run(run_id: str, force: bool) -> List[str]:
     return response["content"]
 
 
-def get_resolutions_with_orphaned_jobs() -> List[str]:
-    """Get ids of resolutions that have terminated which still have non-terminal jobs."""
-    response = _get("/resolutions/with_orphaned_jobs")
+def clean_orphaned_run(run_id: str) -> str:
+    """Clean up a run whose resolution has terminated."""
+    response = _post(f"/runs/{run_id}/clean", retry=True)
     return response["content"]
+
+
+def clean_stale_resolution(run_id: str) -> str:
+    """Clean up a resolution whose run has terminated."""
+    response = _post(f"/resolutions/{run_id}/clean", retry=True)
+    return response["content"]
+
+
+def get_resolution_ids_with_orphaned_jobs() -> List[str]:
+    """Get ids of resolutions that have terminated which still have non-terminal jobs."""
+    return _search_for_gc_resolutions("orphaned_jobs")
+
+
+def get_resolutions_with_stale_statuses() -> List[str]:
+    """Get ids of resolutions that have terminated which still have non-terminal jobs."""
+    return _search_for_gc_resolutions("stale")
+
+
+def _search_for_gc_resolutions(filter_name: str) -> List[str]:
+    filters = {filter_name: {"eq": True}}
+    query_params = {
+        "filters": json.dumps(filters),
+        "fields": json.dumps(["root_id"]),
+    }
+    response = _get("/resolutions?{}".format(urlencode(query_params)))
+    return [resolution["root_id"] for resolution in response["content"]]
 
 
 def clean_orphaned_jobs_for_resolution(root_run_id: str, force: bool) -> List[str]:
@@ -495,8 +537,27 @@ def update_run_future_states(run_ids: List[str]) -> Dict[str, FutureState]:
     return result_dict
 
 
-def notify_pipeline_update(calculator_path: str):
-    _notify_event("pipeline", "update", {"calculator_path": calculator_path})
+def save_metric_points(metric_points: List[MetricPoint]) -> None:
+    """
+    Saves metric points.
+
+    Parameters
+    ----------
+    metric_points: List[MetricPoint]
+        THe list of metric points to persist.
+    """
+    payload = dict(
+        metric_points=[
+            metric_point.to_json_encodable() for metric_point in metric_points
+        ]
+    )
+
+    _post("/metrics", json_payload=payload)
+    _notify_event("metrics", "update", payload)
+
+
+def notify_pipeline_update(function_path: str):
+    _notify_event("pipeline", "update", {"function_path": function_path})
 
 
 def notify_graph_update(run_id: str):
