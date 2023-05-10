@@ -1,6 +1,6 @@
 # Standard Library
 import json
-from typing import Any, Iterable, List, Optional, Set, Type, Tuple, _GenericAlias
+from typing import Any, Iterable, List, Optional, Set, Type, Tuple, GenericAlias
 
 # Sematic
 from sematic.types.casting import safe_cast, can_cast_type
@@ -83,7 +83,7 @@ def _can_cast_to_set(from_type: Any, to_type: Any) -> Tuple[bool, Optional[str]]
     """
     err_prefix = "Can't cast {} to {}:".format(from_type, to_type)
 
-    if not isinstance(from_type, _GenericAlias):  # type: ignore
+    if not isinstance(from_type, GenericAlias):  # type: ignore
         return False, "{} not a subscripted generic".format(err_prefix)
 
     if not (
