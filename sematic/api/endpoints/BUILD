@@ -17,6 +17,7 @@ sematic_py_lib(
         "//sematic/db:queries",
         "//sematic/db/models:artifact",
         "//sematic/db/models:edge",
+        "//sematic/db/models:resolution",
         "//sematic/db/models:run",
         "//sematic/db/models:user",
         "//sematic/scheduling:job_scheduler",
@@ -219,5 +220,17 @@ sematic_py_lib(
         "//sematic/metrics:run_count_metric",
         "//sematic/plugins:abstract_metrics_storage",
         "//sematic/plugins/metrics_storage/sql:sql_metrics_storage",
+    ],
+)
+
+sematic_py_lib(
+    name = "users",
+    srcs = ["users.py"],
+    pip_deps = ["flask"],
+    deps = [
+        "//sematic/api:app",
+        "//sematic/api/endpoints:auth",
+        "//sematic/db:queries",
+        "//sematic/db/models:user",
     ],
 )

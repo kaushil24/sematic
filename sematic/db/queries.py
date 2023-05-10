@@ -64,7 +64,12 @@ def get_artifact(artifact_id: str) -> Artifact:
         return session.query(Artifact).filter(Artifact.id == artifact_id).one()
 
 
-def get_users(user_ids: List[str]) -> List[User]:
+def get_users() -> List[User]:
+    with db().get_session() as session:
+        return session.query(User).order_by(User.first_name).all()
+
+
+def get_users_by_id(user_ids: List[str]) -> List[User]:
     """
     Get users from the database.
 
@@ -203,9 +208,9 @@ def get_run_status_details(
     return future_state_and_jobs_by_run_id
 
 
-def get_calculator_path(run_id: str) -> str:
+def get_function_path(run_id: str) -> str:
     with db().get_session() as session:
-        row = session.query(Run.calculator_path).filter(Run.id == run_id).one()
+        row = session.query(Run.function_path).filter(Run.id == run_id).one()
 
     return row[0]
 
@@ -217,28 +222,26 @@ class BasicPipelineMetrics:
     total_count: int
 
 
-def get_basic_pipeline_metrics(calculator_path: str):
+def get_basic_pipeline_metrics(function_path: str):
     with db().get_session() as session:
         count_by_state = list(
             session.query(Run.future_state, sqlalchemy.func.count())
-            .filter(Run.calculator_path == calculator_path)
+            .filter(Run.function_path == function_path)
             .group_by(Run.future_state)
         )
 
         RootRun = sqlalchemy.orm.aliased(Run)
         avg_runtime_children = list(
             session.query(
-                Run.calculator_path,
+                Run.function_path,
                 sqlalchemy.func.avg(
                     sqlalchemy.func.extract("epoch", Run.resolved_at)
                     - sqlalchemy.func.extract("epoch", Run.started_at)
                 ),
             )
             .join(RootRun, Run.root_id == RootRun.id)
-            .filter(
-                RootRun.calculator_path == calculator_path, Run.resolved_at is not None
-            )
-            .group_by(Run.calculator_path)
+            .filter(RootRun.function_path == function_path, Run.resolved_at is not None)
+            .group_by(Run.function_path)
         )
 
     total_count = sum([count for _, count in count_by_state])
@@ -332,7 +335,7 @@ def save_job(job: Job) -> Job:
         return job
 
 
-def get_runs_with_orphaned_jobs() -> List[str]:
+def get_run_ids_with_orphaned_jobs() -> List[str]:
     with db().get_session() as session:
         query_results = list(
             session.query(
@@ -365,7 +368,7 @@ def get_runs_with_orphaned_jobs() -> List[str]:
     return list(run_ids)
 
 
-def get_resolutions_with_orphaned_jobs() -> List[str]:
+def get_resolution_ids_with_orphaned_jobs() -> List[str]:
     with db().get_session() as session:
         query_results = list(
             session.query(
@@ -388,6 +391,82 @@ def get_resolutions_with_orphaned_jobs() -> List[str]:
                 root_id,
                 status,
                 job_state,
+            )
+            resolution_ids.append(root_id)
+    return resolution_ids
+
+
+def get_orphaned_run_ids() -> List[str]:
+    """Get runs whose status is non-terminal, but whose resolutions are terminated.
+
+    Returns
+    -------
+    A list of ids.
+    """
+    with db().get_session() as session:
+        query_results = list(
+            session.query(
+                Run.id,
+                Run.root_id,
+                Run.future_state,
+                Resolution.status,
+                Resolution.root_id,
+            )
+            .filter(Run.root_id == Resolution.root_id)
+            .filter(
+                Resolution.status.in_(
+                    [status.value for status in ResolutionStatus.terminal_states()]
+                )
+            )
+            .filter(Run.future_state.not_in(FutureState.terminal_state_strings()))
+            .all()
+        )
+        run_ids = []
+        for run_id, root_id, run_state, resolution_status, _ in query_results:
+            logger.info(
+                "Resolution %s in state %s has orphaned run %s in state %s",
+                root_id,
+                resolution_status,
+                run_id,
+                run_state,
+            )
+            run_ids.append(run_id)
+    return run_ids
+
+
+def get_stale_resolution_ids() -> List[str]:
+    """Get ids of resolutions that is non-terminal, but whose root runs are.
+
+    Returns
+    -------
+    A list of ids.
+    """
+    with db().get_session() as session:
+        query_results = list(
+            session.query(
+                Run.id,
+                Run.root_id,
+                Run.future_state,
+                Resolution.status,
+                Resolution.root_id,
+            )
+            .filter(Run.id == Resolution.root_id)
+            .filter(
+                Resolution.status.not_in(
+                    [status.value for status in ResolutionStatus.terminal_states()]
+                )
+            )
+            .filter(Run.future_state.in_(FutureState.terminal_state_strings()))
+            .all()
+        )
+        resolution_ids = []
+        for run_id, root_id, run_state, resolution_status, _ in query_results:
+            logger.info(
+                "Resolution %s in state %s has root run %s in state %s",
+                root_id,
+                resolution_status,
+                run_id,
+                run_state,
             )
             resolution_ids.append(root_id)
     return resolution_ids

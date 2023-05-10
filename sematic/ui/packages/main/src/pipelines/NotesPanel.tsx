@@ -1,5 +1,6 @@
 import { Box, Stack, TextField, useTheme } from "@mui/material";
 import { Note, Run, User } from "@sematic/common/src/Models";
+import UserContext from "@sematic/common/src/context/UserContext";
 import {
   KeyboardEvent,
   useCallback,
@@ -7,43 +8,50 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState
+  useState,
 } from "react";
-import { UserContext } from "src/appContext";
+import { NoteCreatePayload, NoteListPayload } from "src/Payloads";
 import { NoteView } from "src/components/Notes";
 import { ExtractContextType } from "src/components/utils/typings";
-import { usePipelinePanelsContext, usePipelineRunContext } from "src/hooks/pipelineHooks";
-import { NoteCreatePayload, NoteListPayload } from "src/Payloads";
+import {
+  usePipelinePanelsContext,
+  usePipelineRunContext,
+} from "src/hooks/pipelineHooks";
+import PipelinePanelsContext from "src/pipelines/PipelinePanelsContext";
 import PipelineRunViewContext from "src/pipelines/PipelineRunViewContext";
 import { fetchJSON } from "src/utils";
-import PipelinePanelsContext from "src/pipelines/PipelinePanelsContext";
 
 export default function NotesPanel() {
   const theme = useTheme();
   const { user } = useContext(UserContext);
 
-  const { rootRun } 
-    = usePipelineRunContext() as ExtractContextType<typeof PipelineRunViewContext> & {
-      rootRun: Run
+  const { rootRun } = usePipelineRunContext() as ExtractContextType<
+    typeof PipelineRunViewContext
+  > & {
+    rootRun: Run;
   };
-  const { selectedRun } = usePipelinePanelsContext() as ExtractContextType<typeof PipelinePanelsContext> & {
-    selectedRun: Run
+  const { selectedRun } = usePipelinePanelsContext() as ExtractContextType<
+    typeof PipelinePanelsContext
+  > & {
+    selectedRun: Run;
   };
 
-
-  const calculatorPath = useMemo(
-    () => rootRun.calculator_path,
-    [rootRun.calculator_path]
+  const functionPath = useMemo(
+    () => rootRun.function_path,
+    [rootRun.function_path]
   );
 
-  const anonymousUser: User = useMemo(() => ({
-    id: "",
-    email: "anonymous@acme.com",
-    first_name: "Anonymous",
-    last_name: null,
-    avatar_url: null,
-    api_key: null,
-  }), []);
+  const anonymousUser: User = useMemo(
+    () => ({
+      id: "",
+      email: "anonymous@acme.com",
+      first_name: "Anonymous",
+      last_name: null,
+      avatar_url: null,
+      api_key: null,
+    }),
+    []
+  );
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [inputDisabled, setInputDisabled] = useState(false);
@@ -51,13 +59,13 @@ export default function NotesPanel() {
 
   useEffect(() => {
     fetchJSON({
-      url: "/api/v1/notes?calculator_path=" + calculatorPath,
+      url: "/api/v1/notes?function_path=" + functionPath,
       apiKey: user?.api_key,
       callback: (payload: NoteListPayload) => {
         setNotes(payload.content);
       },
     });
-  }, [calculatorPath, user?.api_key]);
+  }, [functionPath, user?.api_key]);
 
   const submitNote = useCallback(
     (event: KeyboardEvent) => {
