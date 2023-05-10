@@ -66,8 +66,9 @@ def _set_from_json_encodable(value: set, type_: typing.Any) -> typing.Set[typing
 
 
 @register_can_cast(set)
-def _can_cast_to_set(from_type: typing.Any, to_type: typing.Any
-                     ) -> typing.Tuple[bool, typing.Optional[str]]:
+def _can_cast_to_set(
+    from_type: typing.Any, to_type: typing.Any
+) -> typing.Tuple[bool, typing.Optional[str]]:
     """
     Type casting logic for `Set[T]`.
 
@@ -106,8 +107,9 @@ def _can_cast_to_set(from_type: typing.Any, to_type: typing.Any
 
 
 @register_to_json_encodable_summary(set)
-def _set_to_json_encodable_summary(value: typing.Set, type_: typing.Type
-                                   ) -> SummaryOutput:
+def _set_to_json_encodable_summary(
+    value: typing.Set, type_: typing.Type
+) -> SummaryOutput:
     """
     Summary for the UI
     """
