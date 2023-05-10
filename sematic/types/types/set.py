@@ -35,7 +35,7 @@ def _set_safe_cast(
 
     element_type = type_.__args__[0]
 
-    result: Set[element_type] = set()  # type: ignore
+    result: typing.Set[element_type] = set()  # type: ignore
 
     for element in value:
         cast_element, error = safe_cast(element, element_type)
@@ -66,7 +66,8 @@ def _set_from_json_encodable(value: set, type_: typing.Any) -> typing.Set[typing
 
 
 @register_can_cast(set)
-def _can_cast_to_set(from_type: typing.Any, to_type: typing.Any) -> typing.Tuple[bool, typing.Optional[str]]:
+def _can_cast_to_set(from_type: typing.Any, to_type: typing.Any
+                     ) -> typing.Tuple[bool, typing.Optional[str]]:
     """
     Type casting logic for `Set[T]`.
 
@@ -105,7 +106,8 @@ def _can_cast_to_set(from_type: typing.Any, to_type: typing.Any) -> typing.Tuple
 
 
 @register_to_json_encodable_summary(set)
-def _set_to_json_encodable_summary(value: typing.Set, type_: typing.Type) -> SummaryOutput:
+def _set_to_json_encodable_summary(value: typing.Set, type_: typing.Type
+                                   ) -> SummaryOutput:
     """
     Summary for the UI
     """
