@@ -1,6 +1,6 @@
 # Standard Library
 import json
-from typing import Any, Iterable, List, Optional, Set, Type, Tuple, GenericAlias
+import typing
 
 # Sematic
 from sematic.types.casting import safe_cast, can_cast_type
@@ -23,14 +23,14 @@ MAX_SUMMARY_BYTES = 2**17  # 128 kB
 
 @register_safe_cast(set)
 def _set_safe_cast(
-    value: Set, type_: Type
-) -> Tuple[Optional[Set], Optional[str]]:
+    value: typing.Set, type_: typing.Type
+) -> typing.Tuple[typing.Optional[typing.Set], typing.Optional[str]]:
     """
     Casting logic for `Set[T]`.
 
     All elements in set are attempted to cast to `T`.
     """
-    if not isinstance(value, Iterable):
+    if not isinstance(value, typing.Iterable):
         return None, f"{value} not an iterable"
 
     element_type = type_.__args__[0]
@@ -48,7 +48,7 @@ def _set_safe_cast(
 
 
 @register_to_json_encodable(set)
-def _set_to_json_encodable(value: set, type_: Any) -> List:
+def _set_to_json_encodable(value: set, type_: typing.Any) -> typing.List:
     """
     Serialization of sets
     """
@@ -57,7 +57,7 @@ def _set_to_json_encodable(value: set, type_: Any) -> List:
 
 
 @register_from_json_encodable(set)
-def _set_from_json_encodable(value: set, type_: Any) -> Set[Any]:
+def _set_from_json_encodable(value: set, type_: typing.Any) -> typing.Set[typing.Any]:
     """
     Deserialize a sets
     """
@@ -66,7 +66,7 @@ def _set_from_json_encodable(value: set, type_: Any) -> Set[Any]:
 
 
 @register_can_cast(set)
-def _can_cast_to_set(from_type: Any, to_type: Any) -> Tuple[bool, Optional[str]]:
+def _can_cast_to_set(from_type: typing.Any, to_type: typing.Any) -> typing.Tuple[bool, typing.Optional[str]]:
     """
     Type casting logic for `Set[T]`.
 
@@ -83,12 +83,12 @@ def _can_cast_to_set(from_type: Any, to_type: Any) -> Tuple[bool, Optional[str]]
     """
     err_prefix = "Can't cast {} to {}:".format(from_type, to_type)
 
-    if not isinstance(from_type, GenericAlias):  # type: ignore
+    if not isinstance(from_type, typing._GenericAlias):  # type: ignore
         return False, "{} not a subscripted generic".format(err_prefix)
 
     if not (
         isinstance(from_type.__origin__, type)
-        and issubclass(from_type.__origin__, Iterable)
+        and issubclass(from_type.__origin__, typing.Iterable)
     ):
         return False, "{} not an iterable".format(err_prefix)
 
@@ -105,7 +105,7 @@ def _can_cast_to_set(from_type: Any, to_type: Any) -> Tuple[bool, Optional[str]]
 
 
 @register_to_json_encodable_summary(set)
-def _set_to_json_encodable_summary(value: Set, type_: Type) -> SummaryOutput:
+def _set_to_json_encodable_summary(value: typing.Set, type_: typing.Type) -> SummaryOutput:
     """
     Summary for the UI
     """
