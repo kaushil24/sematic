@@ -3,7 +3,7 @@ import abc
 import inspect
 import typing
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 # Sematic
 from sematic.types.generic_type import GenericType

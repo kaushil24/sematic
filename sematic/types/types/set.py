@@ -3,7 +3,7 @@ import json
 import typing
 
 # Sematic
-from sematic.types.casting import safe_cast, can_cast_type
+from sematic.types.casting import can_cast_type, safe_cast
 from sematic.types.registry import (
     SummaryOutput,
     register_can_cast,

@@ -2,7 +2,7 @@
 from abc import ABC, ABCMeta, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import Any, List, Literal, Optional, Union, Set
+from typing import Any, List, Literal, Optional, Set, Union
 
 # Third-party
 import pytest
